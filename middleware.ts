@@ -27,7 +27,10 @@ export async function middleware(request: NextRequest) {
     }
 
     if (isValid) {
+      console.log('[Googlebot Check] REWRITING to /googlebot')
       return NextResponse.rewrite(new URL('/googlebot', request.url))
+    } else {
+      console.log('[Googlebot Check] REJECTED - serving user page')
     }
   }
 
