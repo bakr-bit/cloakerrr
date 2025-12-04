@@ -6,13 +6,18 @@ import { isVerifiedGoogleBot } from './utils/verifyGooglebot'
 const ipCache = new Map<string, boolean>()
 
 export async function middleware(request: NextRequest) {
-  const userAgent = request.headers.get('user-agent') || ''
+  // 1. GEO CHECK - Skip everything for Swedish visitors
+  const country = request.geo?.country || request.headers.get('x-vercel-ip-country') || ''
+  if (country === 'SE') {
+    return NextResponse.next()
+  }
 
-  // Only check if it CLAIMS to be Googlebot
+  // 2. Only check if it CLAIMS to be Googlebot (non-Swedish traffic)
+  const userAgent = request.headers.get('user-agent') || ''
   if (userAgent.includes('Googlebot')) {
     const ip = request.ip || request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
 
-    // 1. Check Cache First
+    // Check Cache First
     if (ipCache.has(ip)) {
       const isGoodBot = ipCache.get(ip)
       if (isGoodBot) {
