@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { isGooglebotIpByRange } from './utils/googlebotRanges'
-// import { isVerifiedGoogleBot } from './utils/verifyGooglebot' // Optional: for strict DNS check
+import { isVerifiedGoogleBot } from './utils/verifyGooglebot'
 
 export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || ''
@@ -13,14 +13,15 @@ export async function middleware(request: NextRequest) {
       request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
       '127.0.0.1'
 
-    // Fast path: CIDR range check (no DNS, just integer math)
-    const isGooglebotIp = await isGooglebotIpByRange(ip)
+    // Fast path: CIDR range check (covers actual Googlebot crawler)
+    let isValid = await isGooglebotIpByRange(ip)
 
-    if (isGooglebotIp) {
-      // Optional: Add strict DNS double-check for high-value endpoints
-      // const strictVerified = await isVerifiedGoogleBot(ip)
-      // if (!strictVerified) return NextResponse.next()
+    // Fallback: DNS verification (covers testing tools like Rich Results Test)
+    if (!isValid) {
+      isValid = await isVerifiedGoogleBot(ip)
+    }
 
+    if (isValid) {
       return NextResponse.rewrite(new URL('/googlebot', request.url))
     }
   }
