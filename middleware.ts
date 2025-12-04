@@ -6,8 +6,14 @@ import { isVerifiedGoogleBot } from './utils/verifyGooglebot'
 export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || ''
 
-  // Only check if it CLAIMS to be Googlebot
-  if (userAgent.includes('Googlebot')) {
+  // Check for Googlebot and other Google crawlers/tools
+  const isGoogleUA =
+    userAgent.includes('Googlebot') ||
+    userAgent.includes('Google-InspectionTool') ||
+    userAgent.includes('Storebot-Google') ||
+    userAgent.includes('GoogleOther')
+
+  if (isGoogleUA) {
     const ip =
       request.headers.get('x-real-ip') ||
       request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
