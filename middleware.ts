@@ -9,7 +9,6 @@ export async function middleware(request: NextRequest) {
   // Only check if it CLAIMS to be Googlebot
   if (userAgent.includes('Googlebot')) {
     const ip =
-      request.ip ||
       request.headers.get('x-real-ip') ||
       request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
       '127.0.0.1'
