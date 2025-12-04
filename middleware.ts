@@ -1,34 +1,27 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { isVerifiedGoogleBot } from './utils/verifyGooglebot'
-
-// Simple in-memory cache for verified IPs
-const ipCache = new Map<string, boolean>()
+import { isGooglebotIpByRange } from './utils/googlebotRanges'
+// import { isVerifiedGoogleBot } from './utils/verifyGooglebot' // Optional: for strict DNS check
 
 export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || ''
 
   // Only check if it CLAIMS to be Googlebot
   if (userAgent.includes('Googlebot')) {
-    const ip = request.ip || request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
+    const ip =
+      request.ip ||
+      request.headers.get('x-real-ip') ||
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      '127.0.0.1'
 
-    // Check Cache First
-    if (ipCache.has(ip)) {
-      const isGoodBot = ipCache.get(ip)
-      if (isGoodBot) {
-        return NextResponse.rewrite(new URL('/googlebot', request.url))
-      }
-      // Cached as false - don't serve bot page
-      return NextResponse.next()
-    }
+    // Fast path: CIDR range check (no DNS, just integer math)
+    const isGooglebotIp = await isGooglebotIpByRange(ip)
 
-    // 2. Perform DoH Check
-    const isValid = await isVerifiedGoogleBot(ip)
+    if (isGooglebotIp) {
+      // Optional: Add strict DNS double-check for high-value endpoints
+      // const strictVerified = await isVerifiedGoogleBot(ip)
+      // if (!strictVerified) return NextResponse.next()
 
-    // 3. Save to Cache
-    ipCache.set(ip, isValid)
-
-    if (isValid) {
       return NextResponse.rewrite(new URL('/googlebot', request.url))
     }
   }
