@@ -53,8 +53,11 @@ export async function middleware(request: NextRequest) {
     }
 
     if (isValid) {
-      console.log('[Googlebot Check] REWRITING to /bot.html')
-      return NextResponse.rewrite(new URL('/bot.html', request.url))
+      console.log('[Googlebot Check] Serving "Hi Google"')
+      return new NextResponse('Hi Google', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      })
     } else {
       console.log('[Googlebot Check] REJECTED - serving user page')
     }
