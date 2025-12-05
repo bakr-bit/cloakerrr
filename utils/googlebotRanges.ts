@@ -1,21 +1,14 @@
 // utils/googlebotRanges.ts
-// Fast Googlebot verification using Google's official IP range JSON
+// Fast Googlebot verification using pre-fetched IP ranges (build-time)
 // CIDR RANGE CHECK (Fast Path ~0ms, no network I/O)
 
-const RANGES_URL = 'https://developers.google.com/static/search/apis/ipranges/googlebot.json'
-const RANGES_TTL_MS = 10 * 60 * 1000 // 10 minutes
+import { IPV4_PREFIXES, IPV6_PREFIXES } from './googlebot-ranges.generated'
 
 // IPv4 range: network + mask as 32-bit unsigned integers
 type IPv4Range = { network: number; mask: number }
 
-// IPv6 range: network + mask as BigInt (128-bit)
+// IPv6 range: network + prefixLen as BigInt (128-bit)
 type IPv6Range = { network: bigint; prefixLen: number }
-
-// In-memory cached ranges
-let ipv4Ranges: IPv4Range[] = []
-let ipv6Ranges: IPv6Range[] = []
-let rangesExpires = 0
-let initialLoadPromise: Promise<void> | null = null
 
 // --- IPv4 helpers ---
 
@@ -104,72 +97,25 @@ function isIPv6(ip: string): boolean {
   return ip.includes(':')
 }
 
-// --- Range loading ---
+// --- Parse prefixes at module load (static, no network I/O) ---
 
-async function fetchAndParseRanges(): Promise<void> {
-  try {
-    const res = await fetch(RANGES_URL, { cache: 'no-store' })
-    const data = await res.json()
+const ipv4Ranges: IPv4Range[] = IPV4_PREFIXES.map(parseIPv4Cidr).filter(
+  (r): r is IPv4Range => r !== null
+)
 
-    const newIPv4Ranges: IPv4Range[] = []
-    const newIPv6Ranges: IPv6Range[] = []
+const ipv6Ranges: IPv6Range[] = IPV6_PREFIXES.map(parseIPv6Cidr).filter(
+  (r): r is IPv6Range => r !== null
+)
 
-    for (const prefix of data.prefixes || []) {
-      if (prefix.ipv4Prefix) {
-        const r = parseIPv4Cidr(prefix.ipv4Prefix)
-        if (r) newIPv4Ranges.push(r)
-      }
-      if (prefix.ipv6Prefix) {
-        const r = parseIPv6Cidr(prefix.ipv6Prefix)
-        if (r) newIPv6Ranges.push(r)
-      }
-    }
-
-    ipv4Ranges = newIPv4Ranges
-    ipv6Ranges = newIPv6Ranges
-    rangesExpires = Date.now() + RANGES_TTL_MS
-
-    console.log(
-      `[Googlebot Ranges] Loaded ${ipv4Ranges.length} IPv4 and ${ipv6Ranges.length} IPv6 prefixes`
-    )
-  } catch (err) {
-    console.error('[Googlebot Ranges] Failed to load:', err)
-    // Keep existing ranges if fetch fails
-  }
-}
-
-// Pre-fetch ranges at module load (runs once on cold start)
-function ensureRangesLoaded(): Promise<void> {
-  const now = Date.now()
-
-  // If ranges are fresh, return immediately
-  if (now < rangesExpires && (ipv4Ranges.length > 0 || ipv6Ranges.length > 0)) {
-    return Promise.resolve()
-  }
-
-  // If already loading, return existing promise
-  if (initialLoadPromise) {
-    return initialLoadPromise
-  }
-
-  // Start loading
-  initialLoadPromise = fetchAndParseRanges().finally(() => {
-    initialLoadPromise = null
-  })
-
-  return initialLoadPromise
-}
-
-// Trigger pre-fetch immediately at module initialization (non-blocking)
-// No setInterval - Edge/serverless runtimes spin down between requests
-// Each caller will revalidate TTL on demand via ensureRangesLoaded()
-ensureRangesLoaded()
+console.log(
+  `[Googlebot Ranges] Loaded ${ipv4Ranges.length} IPv4 and ${ipv6Ranges.length} IPv6 prefixes (build-time)`
+)
 
 // --- Public API ---
 
 /**
  * Synchronous check if IP is in Googlebot ranges.
- * Returns false if ranges haven't loaded yet (fail-closed).
+ * Fully in-memory, no network I/O - ranges are embedded at build time.
  */
 export function isGooglebotIpByRangeSync(ip: string): boolean {
   if (isIPv4(ip)) {
@@ -188,10 +134,8 @@ export function isGooglebotIpByRangeSync(ip: string): boolean {
 }
 
 /**
- * Async check that ensures ranges are loaded first.
- * Use this if you need guaranteed ranges (e.g., first request after cold start).
+ * Async wrapper for compatibility. No actual async work - returns immediately.
  */
 export async function isGooglebotIpByRange(ip: string): Promise<boolean> {
-  await ensureRangesLoaded()
   return isGooglebotIpByRangeSync(ip)
 }
