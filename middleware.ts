@@ -22,9 +22,9 @@ export async function middleware(request: NextRequest) {
     console.log('[Googlebot Check] UA:', userAgent.substring(0, 50))
     console.log('[Googlebot Check] IP:', ip)
 
-    // Fast path: CIDR range check (covers actual Googlebot crawler)
+    // CIDR RANGE CHECK (Fast Path ~0ms, no network I/O)
     let isValid = await isGooglebotIpByRange(ip)
-    console.log('[Googlebot Check] CIDR result:', isValid)
+    console.log('[Googlebot Check] CIDR RANGE CHECK (Fast Path ~0ms, no network I/O):', isValid)
 
     // Fallback: DNS verification (covers testing tools like Rich Results Test)
     if (!isValid) {
