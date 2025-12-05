@@ -4,6 +4,10 @@ import { isGooglebotIpByRange } from './utils/googlebotRanges'
 import { isVerifiedGoogleBot } from './utils/verifyGooglebot'
 
 function getClientIp(request: NextRequest): string {
+  // Cloudflare: real client IP
+  const cfIp = request.headers.get('cf-connecting-ip')
+  if (cfIp) return cfIp.trim()
+
   // Prefer platform-provided IP when available (Vercel, etc.)
   // Note: request.ip is Vercel-specific, not in standard NextRequest type
   const platformIp = (request as unknown as { ip?: string }).ip
