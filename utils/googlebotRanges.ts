@@ -160,13 +160,10 @@ function ensureRangesLoaded(): Promise<void> {
   return initialLoadPromise
 }
 
-// Trigger pre-fetch immediately at module initialization
+// Trigger pre-fetch immediately at module initialization (non-blocking)
+// No setInterval - Edge/serverless runtimes spin down between requests
+// Each caller will revalidate TTL on demand via ensureRangesLoaded()
 ensureRangesLoaded()
-
-// Schedule background refresh
-setInterval(() => {
-  ensureRangesLoaded()
-}, RANGES_TTL_MS)
 
 // --- Public API ---
 

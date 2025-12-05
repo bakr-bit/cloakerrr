@@ -3,6 +3,25 @@ import type { NextRequest } from 'next/server'
 import { isGooglebotIpByRange } from './utils/googlebotRanges'
 import { isVerifiedGoogleBot } from './utils/verifyGooglebot'
 
+function getClientIp(request: NextRequest): string {
+  // Prefer platform-provided IP when available (Vercel, etc.)
+  // Note: request.ip is Vercel-specific, not in standard NextRequest type
+  const platformIp = (request as unknown as { ip?: string }).ip
+  if (platformIp) return platformIp
+
+  const realIp = request.headers.get('x-real-ip')
+  if (realIp) return realIp.trim()
+
+  const xff = request.headers.get('x-forwarded-for')
+  if (xff) {
+    const first = xff.split(',')[0]
+    if (first) return first.trim()
+  }
+
+  // Dev / fallback
+  return '127.0.0.1'
+}
+
 export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || ''
 
@@ -14,10 +33,7 @@ export async function middleware(request: NextRequest) {
     userAgent.includes('GoogleOther')
 
   if (isGoogleUA) {
-    const ip =
-      request.headers.get('x-real-ip') ||
-      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      '127.0.0.1'
+    const ip = getClientIp(request)
 
     console.log('[Googlebot Check] UA:', userAgent.substring(0, 50))
     console.log('[Googlebot Check] IP:', ip)

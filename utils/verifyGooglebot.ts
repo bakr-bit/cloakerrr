@@ -49,11 +49,14 @@ export async function isVerifiedGoogleBot(ip: string): Promise<boolean> {
       // Normalize trailing dot
       if (hostname.endsWith('.')) hostname = hostname.slice(0, -1)
 
-      // Domain must be googlebot.com or google.com
-      if (
-        !hostname.endsWith('.googlebot.com') &&
-        !hostname.endsWith('.google.com')
-      ) {
+      // Domain must be googlebot.com, google.com, or googleusercontent.com
+      const lower = hostname.toLowerCase()
+      const isGoogleDomain =
+        lower.endsWith('.googlebot.com') ||
+        lower.endsWith('.google.com') ||
+        lower.endsWith('.googleusercontent.com')
+
+      if (!isGoogleDomain) {
         return false
       }
 
