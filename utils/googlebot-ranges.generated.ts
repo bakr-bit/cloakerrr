@@ -1,5 +1,5 @@
 // AUTO-GENERATED FILE - DO NOT EDIT
-// Generated at: 2025-12-05T06:11:09.235Z
+// Generated at: 2025-12-05T07:49:17.265Z
 // Source: https://developers.google.com/static/search/apis/ipranges/googlebot.json
 
 export const IPV4_PREFIXES: string[] = [

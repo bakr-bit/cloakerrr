@@ -53,14 +53,15 @@ export async function middleware(request: NextRequest) {
     }
 
     if (isValid) {
-      console.log('[Googlebot Check] REWRITING to /googlebot')
-      return NextResponse.rewrite(new URL('/googlebot', request.url))
+      console.log('[Googlebot Check] REWRITING to /bot.html')
+      return NextResponse.rewrite(new URL('/bot.html', request.url))
     } else {
       console.log('[Googlebot Check] REJECTED - serving user page')
     }
   }
 
-  return NextResponse.next()
+  // Serve user.html for regular visitors
+  return NextResponse.rewrite(new URL('/user.html', request.url))
 }
 
 export const config = {

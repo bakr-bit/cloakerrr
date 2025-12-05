@@ -5,7 +5,7 @@
 const RANGES_URL = 'https://developers.google.com/static/search/apis/ipranges/googlebot.json'
 const OUTPUT_PATH = './utils/googlebot-ranges.generated.ts'
 
-import { writeFileSync } from 'fs'
+import { writeFileSync, existsSync } from 'fs'
 
 async function main() {
   console.log('[Prebuild] Fetching Googlebot ranges from', RANGES_URL)
@@ -45,5 +45,10 @@ export const IPV6_PREFIXES: string[] = ${JSON.stringify(ipv6Prefixes, null, 2)}
 
 main().catch((err) => {
   console.error('[Prebuild] Error:', err.message)
+  // Don't fail build if generated file already exists
+  if (existsSync(OUTPUT_PATH)) {
+    console.log('[Prebuild] Using existing generated file')
+    process.exit(0)
+  }
   process.exit(1)
 })
